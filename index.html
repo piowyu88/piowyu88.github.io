@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>作品集入口</title>
+<style>
+  :root {
+    --bg-0: #0d0b14; --bg-1: #17141f; --bg-2: #201c2b;
+    --border: #322c3d; --text-0: #f2eef7; --text-1: #b8b2c4;
+    --accent: #c9a4ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    background: var(--bg-0); color: var(--text-0); padding: 40px 20px;
+  }
+  h1 { text-align: center; font-size: 26px; margin-bottom: 8px; }
+  p.sub { text-align: center; color: var(--text-1); margin-bottom: 36px; }
+  #grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px; max-width: 900px; margin: 0 auto;
+  }
+  .card {
+    background: var(--bg-1); border: 1px solid var(--border); border-radius: 12px;
+    padding: 20px; text-decoration: none; color: var(--text-0);
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card-name { font-size: 16px; font-weight: 700; word-break: break-all; }
+  .card-hint { font-size: 12px; color: var(--text-1); margin-top: 6px; }
+  #status { text-align: center; color: var(--text-1); padding: 40px; }
+  #status.error { color: #ff7d8f; }
+</style>
+</head>
+<body>
+
+<h1>📁 作品集入口</h1>
+<p class="sub">底下每張卡片是一個專案，點下去直接切過去</p>
+
+<div id="status">載入中…</div>
+<div id="grid"></div>
+
+<script>
+// === 上傳到 repo 後，把這兩個值改成你自己的 ===
+const OWNER = "你的GitHub帳號";
+const REPO = "你的帳號.github.io";
+const FOLDER = "projects";
+// ================================================
+
+const statusEl = document.getElementById("status");
+const gridEl = document.getElementById("grid");
+
+async function loadProjects() {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${FOLDER}`);
+    if (!res.ok) {
+      if (res.status === 404) {
+        statusEl.textContent = `找不到「${FOLDER}」資料夾——先建一個，裡面放各專案的子資料夾。`;
+      } else {
+        statusEl.textContent = `讀取失敗（${res.status}）。如果剛上傳很多次，可能是 GitHub API 額度用完了，稍等一下再重新整理。`;
+      }
+      statusEl.classList.add("error");
+      return;
+    }
+    const entries = await res.json();
+    const folders = entries.filter((e) => e.type === "dir");
+
+    if (folders.length === 0) {
+      statusEl.textContent = "目前還沒有任何專案，上傳第一個試試看！";
+      return;
+    }
+
+    statusEl.remove();
+    folders.forEach((folder) => {
+      const a = document.createElement("a");
+      a.className = "card";
+      a.href = `${FOLDER}/${folder.name}/`;
+      a.innerHTML = `<div class="card-name">${folder.name}</div><div class="card-hint">點擊開啟 →</div>`;
+      gridEl.appendChild(a);
+    });
+  } catch (err) {
+    statusEl.textContent = "載入失敗，檢查一下網路連線，或重新整理頁面。";
+    statusEl.classList.add("error");
+  }
+}
+
+loadProjects();
+</script>
+
+</body>
+</html>
