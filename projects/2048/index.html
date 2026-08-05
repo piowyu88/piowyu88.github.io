@@ -195,6 +195,7 @@
     best = Number(localStorage.getItem("game2048_best") || 0);
     bestEl.textContent = best;
     overlayEl.classList.remove("show");
+    gridEl.innerHTML = "";
     for (let i = 0; i < SIZE * SIZE; i++) gridEl.appendChild(document.createElement("div")).className = "cell";
     addRandomTile();
     addRandomTile();
