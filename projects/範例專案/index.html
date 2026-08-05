@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今日小提醒</title>
+<style>
+  body {
+    margin: 0; height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 24px;
+    font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    background: linear-gradient(135deg, #6a5acd, #ff8fab);
+    color: white; text-align: center; padding: 20px; box-sizing: border-box;
+    transition: background 0.4s;
+  }
+  h1 { font-size: 24px; margin: 0; }
+  #quote {
+    font-size: 22px; max-width: 480px; min-height: 90px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  button {
+    background: white; color: #6a5acd; border: none; border-radius: 999px;
+    padding: 14px 32px; font-size: 16px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+  }
+  button:active { transform: scale(0.97); }
+</style>
+</head>
+<body>
+
+<h1>✨ 今日小提醒</h1>
+<div id="quote">按下面的按鈕，抽一句今天的小提醒</div>
+<button id="btn">抽一句 🔮</button>
+
+<script>
+const quotes = [
+  "今天也辛苦了，記得喝水。",
+  "慢慢來比較快。",
+  "休息也是進度的一部分。",
+  "你已經做得比自己想的還好了。",
+  "先完成，再完美。",
+  "今天不用很厲害，撐過去就很棒了。",
+  "累的話，先睡一覺再說。",
+  "小小的進步，也是進步。"
+];
+
+const colors = [
+  ["#6a5acd", "#ff8fab"],
+  ["#4cc9f0", "#7c3aed"],
+  ["#f4a261", "#e76f51"],
+  ["#2a9d8f", "#264653"],
+  ["#ff7d8f", "#ffb86b"]
+];
+
+const quoteEl = document.getElementById("quote");
+const btn = document.getElementById("btn");
+
+btn.addEventListener("click", () => {
+  const q = quotes[Math.floor(Math.random() * quotes.length)];
+  const [c1, c2] = colors[Math.floor(Math.random() * colors.length)];
+  quoteEl.textContent = q;
+  document.body.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
+});
+</script>
+
+</body>
+</html>
