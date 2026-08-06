@@ -198,6 +198,45 @@
     line-height: 1.5;
   }
 
+  .save-box{
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+  .save-box h3{
+    font-size: 14px;
+    color: var(--glow);
+    margin-bottom: 8px;
+  }
+  .save-btn{
+    width:100%;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--glow);
+    background: linear-gradient(180deg, #1f4038, #12241f);
+    color: var(--glow);
+    font-family:'Cinzel', serif;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    cursor:pointer;
+    margin-bottom: 6px;
+  }
+  .save-btn:hover{ box-shadow: 0 0 12px rgba(95,224,199,0.3); }
+
+  .code-area{
+    width: 100%;
+    min-height: 90px;
+    background: #0c1d19;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--parchment);
+    font-family: monospace;
+    font-size: 11px;
+    padding: 8px;
+    resize: vertical;
+    word-break: break-all;
+  }
+
   /* --- Shop --- */
   .shop-header{
     display:flex;
@@ -406,6 +445,13 @@
         <button class="prestige-btn" id="prestigeBtn">蒸餾賢者結晶(重生)</button>
         <div class="prestige-note">重生會將靈蘊與設施歸零重建,但依歷史總煉成量換算的產出倍率會永久保留 —— 讓每一輪都比上一輪更快。</div>
       </div>
+
+      <div class="save-box">
+        <h3>存檔管理</h3>
+        <button class="save-btn" id="exportBtn">匯出存檔碼</button>
+        <button class="save-btn" id="importBtn">匯入存檔碼</button>
+        <div class="prestige-note">存檔碼可以貼到任何地方保存(筆記、雲端硬碟等),換裝置、換瀏覽器都能用它還原進度。</div>
+      </div>
     </div>
 
     <!-- RIGHT: Shop -->
@@ -601,6 +647,7 @@
     updateTopStats();
     renderShop();
     checkMagnitudeMilestone();
+    scheduleSave();
   }
 
   cauldron.addEventListener('click', stir);
@@ -651,8 +698,96 @@
     showPrestigeModal();
   });
 
+  // ---------- Manual save / export / import ----------
+  function encodeSave(){
+    return btoa(encodeURIComponent(JSON.stringify(state)));
+  }
+  function decodeSave(code){
+    return JSON.parse(decodeURIComponent(atob(code.trim())));
+  }
+
+  function showExportModal(){
+    const root = document.getElementById('modalRoot');
+    const code = encodeSave();
+    root.innerHTML = `
+      <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box" style="max-width:420px;">
+          <h3>匯出存檔碼</h3>
+          <p>複製下面這段文字,存到任何你自己的地方(筆記、雲端硬碟、傳給自己的訊息都行)。之後用「匯入存檔碼」貼回來即可還原。</p>
+          <textarea class="code-area" id="exportCode" readonly>${code}</textarea>
+          <div class="modal-actions" style="margin-top:12px;">
+            <button class="modal-cancel" id="modalCancel">關閉</button>
+            <button class="modal-confirm" id="copyBtn">複製</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('modalCancel').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('modalOverlay').addEventListener('click', (e) => { if(e.target.id === 'modalOverlay') root.innerHTML = ''; });
+    document.getElementById('copyBtn').addEventListener('click', async () => {
+      const textarea = document.getElementById('exportCode');
+      try{
+        await navigator.clipboard.writeText(code);
+        toast('已複製到剪貼簿');
+      }catch(err){
+        textarea.select();
+        toast('請手動複製選取的文字');
+      }
+    });
+  }
+
+  function showImportModal(){
+    const root = document.getElementById('modalRoot');
+    root.innerHTML = `
+      <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-box" style="max-width:420px;">
+          <h3>匯入存檔碼</h3>
+          <p>貼上先前匯出的存檔碼。這會覆蓋目前畫面上的進度。</p>
+          <textarea class="code-area" id="importCode" placeholder="貼上存檔碼..."></textarea>
+          <div class="modal-actions" style="margin-top:12px;">
+            <button class="modal-cancel" id="modalCancel">取消</button>
+            <button class="modal-confirm" id="applyImportBtn">還原進度</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('modalCancel').addEventListener('click', () => root.innerHTML = '');
+    document.getElementById('modalOverlay').addEventListener('click', (e) => { if(e.target.id === 'modalOverlay') root.innerHTML = ''; });
+    document.getElementById('applyImportBtn').addEventListener('click', () => {
+      const raw = document.getElementById('importCode').value;
+      try{
+        const loaded = decodeSave(raw);
+        state.essence = loaded.essence || 0;
+        state.lifetimeEarned = loaded.lifetimeEarned || 0;
+        state.totalClicks = loaded.totalClicks || 0;
+        producerDefs.forEach(p => {
+          state.producers[p.key] = (loaded.producers && loaded.producers[p.key]) || 0;
+        });
+        lastMagnitudeFloor = Math.floor(Math.log10(state.lifetimeEarned + 10));
+        renderShop();
+        updateTopStats();
+        updateLiquidColor();
+        saveState();
+        root.innerHTML = '';
+        toast('存檔已還原');
+      }catch(err){
+        toast('存檔碼格式有誤,請確認貼上完整的內容');
+      }
+    });
+  }
+
+  document.getElementById('exportBtn').addEventListener('click', showExportModal);
+  document.getElementById('importBtn').addEventListener('click', showImportModal);
+
   // ---------- Persistence ----------
+  let saveTimer = null;
+  function scheduleSave(){
+    if(saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveState, 500);
+  }
+
   async function saveState(){
+    if(!window.storage){ return; }
     try{
       await window.storage.set(SAVE_KEY, JSON.stringify(state), false);
     }catch(err){
@@ -662,6 +797,11 @@
 
   async function loadState(){
     const footer = document.getElementById('footerNote');
+    if(!window.storage){
+      footer.textContent = '此環境不支援自動存檔,重新整理會重新開始,請保持分頁開啟。';
+      toast('注意:目前環境無法自動存檔');
+      return;
+    }
     try{
       const result = await window.storage.get(SAVE_KEY, false);
       if(result && result.value){
@@ -698,6 +838,8 @@
   setInterval(renderShop, 500);
   setInterval(saveState, 6000);
   document.addEventListener('visibilitychange', () => { if(document.hidden) saveState(); });
+  window.addEventListener('pagehide', () => { saveState(); });
+  window.addEventListener('beforeunload', () => { saveState(); });
 
   // ---------- Init ----------
   (async function init(){
