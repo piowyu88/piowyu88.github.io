@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>勇者送頭</title>
+<style>
+  :root {
+    --bg: #120e1a;
+    --panel: #1b1424;
+    --panel-2: #221a2c;
+    --border: #332740;
+    --ink: #ece3d3;
+    --muted: #8d8298;
+    --blood: #e0473c;
+    --blood-bright: #ff6b57;
+    --gold: #d4a944;
+    --hp-good: #7fb88a;
+    --hp-mid: #d4a944;
+    --hp-bad: #e0473c;
+
+    --font-display: "Iowan Old Style", "Noto Serif TC", "Songti TC", "PMingLiU", serif;
+    --font-body: -apple-system, "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    --font-mono: "SF Mono", "Consolas", "Courier New", monospace;
+  }
+
+  :root[data-theme="light"] {
+    --bg: #ece3d3;
+    --panel: #f7f1e4;
+    --panel-2: #efe6d4;
+    --border: #d8c7a4;
+    --ink: #241b12;
+    --muted: #6f6250;
+    --blood: #c23b30;
+    --blood-bright: #d94c3f;
+    --gold: #a97a1f;
+    --hp-good: #3f7a4d;
+    --hp-mid: #a97a1f;
+    --hp-bad: #c23b30;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #ece3d3;
+      --panel: #f7f1e4;
+      --panel-2: #efe6d4;
+      --border: #d8c7a4;
+      --ink: #241b12;
+      --muted: #6f6250;
+      --blood: #c23b30;
+      --blood-bright: #d94c3f;
+      --gold: #a97a1f;
+      --hp-good: #3f7a4d;
+      --hp-mid: #a97a1f;
+      --hp-bad: #c23b30;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    display: flex;
+    justify-content: center;
+    padding: 28px 14px;
+  }
+
+  .cabinet {
+    width: min(620px, 100%);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 30px 60px -24px rgba(0,0,0,0.5);
+    overflow: hidden;
+  }
+
+  header.top {
+    padding: 20px 24px 6px;
+    text-align: center;
+  }
+
+  header.top h1 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: clamp(22px, 5vw, 27px);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--gold);
+    text-wrap: balance;
+  }
+
+  header.top p {
+    margin: 5px 0 0;
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+
+  .view { padding: 4px 24px 22px; }
+  .view.hidden { display: none; }
+
+  /* ---------- shared bits ---------- */
+  .btn {
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--ink);
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease;
+  }
+  .btn:hover { background: var(--border); }
+  .btn:active { transform: scale(0.97); }
+  .btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.primary { background: var(--gold); color: #1b1424; border-color: var(--gold); }
+  .btn.primary:hover { background: var(--gold); filter: brightness(1.08); }
+  .btn.danger { background: var(--blood); color: #fff; border-color: var(--blood); }
+  .btn.danger:hover { background: var(--blood-bright); }
+  .btn.ghost { background: transparent; }
+  .btn.full { width: 100%; }
+
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  table.board {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    font-family: var(--font-mono);
+    margin-top: 8px;
+  }
+  table.board th, table.board td {
+    text-align: left;
+    padding: 5px 6px;
+    border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums;
+  }
+  table.board th { color: var(--muted); font-weight: 600; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.06em; }
+
+  .callout {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .callout strong { color: var(--ink); }
+
+  /* ---------- intro ---------- */
+  #view-intro .actions { margin-top: 14px; }
+
+  /* ---------- battle ---------- */
+  .combatants {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .fighter {
+    flex: 1 1 200px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .fighter .name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    font-size: 14.5px;
+    margin-bottom: 2px;
+  }
+  .fighter .badge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--blood);
+    border: 1px solid var(--blood);
+    border-radius: 5px;
+    padding: 1px 4px;
+  }
+  .fighter .sub {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .hp-track {
+    height: 10px;
+    border-radius: 6px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .hp-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.25s ease, background 0.25s ease;
+  }
+  .hp-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-line {
+    margin-top: 8px;
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--muted);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .actions-panel { margin-top: 14px; }
+  .skill-list { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+  .skill-btn {
+    text-align: left;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+  }
+  .skill-btn .desc { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .skill-btn .cd { font-family: var(--font-mono); font-size: 11px; color: var(--blood); }
+  .skill-btn .cd.ready { color: var(--hp-good); }
+
+  .log-wrap {
+    margin-top: 14px;
+  }
+  .log-wrap .label {
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 6px;
+  }
+  .log {
+    height: 190px;
+    overflow-y: auto;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.55;
+    scrollbar-width: thin;
+  }
+  .log p { margin: 0; opacity: 0; animation: fadeIn 0.2s ease forwards; }
+  @keyframes fadeIn { to { opacity: 1; } }
+  .log .info { color: var(--muted); }
+  .log .encounter { color: var(--gold); font-weight: 700; }
+  .log .boss-alert { color: var(--blood); font-weight: 700; }
+  .log .boss { color: var(--blood); }
+  .log .dmg-taken { color: var(--blood); }
+  .log .crit-player { color: var(--gold); font-weight: 700; }
+  .log .crit-enemy { color: var(--blood-bright); font-weight: 700; }
+  .log .heal { color: var(--hp-good); }
+  .log .error { color: var(--blood); }
+  .log .levelup { color: var(--gold); font-weight: 700; }
+  .log .victory { color: var(--hp-good); font-weight: 700; }
+  .log .death { color: var(--blood); font-weight: 700; }
+
+  /* ---------- shop ---------- */
+  .shop-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .shop-row:last-of-type { border-bottom: none; }
+  .shop-row .info { font-size: 13px; }
+  .shop-row .info .price { color: var(--gold); font-family: var(--font-mono); }
+  .shop-row .info .current { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; font-family: var(--font-mono); }
+  .shop-msg { min-height: 18px; font-size: 12.5px; color: var(--gold); margin-top: 10px; }
+  .shop-gold { font-family: var(--font-mono); color: var(--gold); font-weight: 700; }
+
+  @media (max-width: 420px) {
+    .fighter { flex: 1 1 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cabinet">
+  <header class="top">
+    <h1>勇者送頭</h1>
+    <p>文字冒險,瀏覽器版</p>
+  </header>
+
+  <!-- ===== 首頁 ===== -->
+  <div class="view" id="view-intro">
+    <div class="callout" id="recordSummary"></div>
+    <div class="actions">
+      <button class="btn primary full" id="btnStart">開始冒險</button>
+    </div>
+  </div>
+
+  <!-- ===== 戰鬥 ===== -->
+  <div class="view hidden" id="view-battle">
+    <div class="combatants">
+      <div class="fighter">
+        <div class="name-row">🧙 勇者</div>
+        <div class="sub" id="heroSub"></div>
+        <div class="hp-track"><div class="hp-fill" id="heroHpFill"></div></div>
+        <div class="hp-label" id="heroHpLabel"></div>
+        <div class="stat-line" id="heroStatLine"></div>
+      </div>
+      <div class="fighter">
+        <div class="name-row"><span id="monsterEmoji"></span><span id="monsterName"></span><span class="badge" id="monsterBadge" style="display:none;">BOSS</span></div>
+        <div class="sub" id="monsterSub"></div>
+        <div class="hp-track"><div class="hp-fill" id="monsterHpFill"></div></div>
+        <div class="hp-label" id="monsterHpLabel"></div>
+      </div>
+    </div>
+
+    <div class="actions-panel" id="mainActions">
+      <div class="btn-row">
+        <button class="btn" id="btnAttack">⚔️ 攻擊</button>
+        <button class="btn" id="btnPotion">🧪 喝藥水</button>
+        <button class="btn" id="btnSkillMenu">✨ 使用技能</button>
+        <button class="btn ghost" id="btnFlee">💨 逃跑</button>
+      </div>
+    </div>
+
+    <div class="actions-panel hidden" id="skillActions">
+      <div class="skill-list" id="skillList"></div>
+      <div class="btn-row" style="margin-top:8px;">
+        <button class="btn ghost" id="btnSkillCancel">取消</button>
+      </div>
+    </div>
+
+    <div class="log-wrap">
+      <p class="label">戰鬥紀錄</p>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+
+  <!-- ===== 戰後選單 ===== -->
+  <div class="view hidden" id="view-result">
+    <div class="callout" id="resultSummary"></div>
+    <div class="btn-row" style="margin-top:14px; flex-direction:column;">
+      <button class="btn primary full" id="btnNextMonster">1. 挑戰下一隻怪物</button>
+      <button class="btn full" id="btnGoShop">2. 前往商店</button>
+      <button class="btn ghost full" id="btnLeaveVillage">3. 返回村莊結束遊戲</button>
+    </div>
+  </div>
+
+  <!-- ===== 商店 ===== -->
+  <div class="view hidden" id="view-shop">
+    <div id="shopMain">
+      <p style="margin:0 0 4px;">💰 目前金幣:<span class="shop-gold" id="shopGold"></span></p>
+
+      <div class="shop-row">
+        <div class="info">1. 藥水 x1 <span class="price" id="priceItem1"></span><span class="current" id="curItem1"></span></div>
+        <button class="btn" id="btnBuy1">購買</button>
+      </div>
+      <div class="shop-row">
+        <div class="info">2. 武器強化,攻擊力+1~+2 <span class="price" id="priceItem2"></span><span class="current" id="curItem2"></span></div>
+        <button class="btn" id="btnBuy2">購買</button>
+      </div>
+      <div class="shop-row">
+        <div class="info">3. 防具強化,傷害減免+1 <span class="price" id="priceItem3"></span><span class="current" id="curItem3"></span></div>
+        <button class="btn" id="btnBuy3">購買</button>
+      </div>
+      <div class="shop-row">
+        <div class="info">4. 生命上限強化,上限+10並回滿 <span class="price" id="priceItem4"></span><span class="current" id="curItem4"></span></div>
+        <button class="btn" id="btnBuy4">購買</button>
+      </div>
+
+      <p class="shop-msg" id="shopMsg"></p>
+      <button class="btn ghost full" id="btnLeaveShop" style="margin-top:6px;">5. 離開商店</button>
+    </div>
+
+    <div class="callout hidden" id="shopConfirm" style="margin-top:14px;">
+      <p style="margin:0 0 10px;">逛完商店了,是否要挑戰下一隻怪物?</p>
+      <div class="btn-row">
+        <button class="btn primary" id="btnShopContinue">繼續冒險</button>
+        <button class="btn ghost" id="btnShopLeave">返回村莊</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 遊戲結束 ===== -->
+  <div class="view hidden" id="view-gameover">
+    <div class="callout" id="gameoverSummary"></div>
+    <div id="gameoverBoard"></div>
+    <div class="actions" style="margin-top:14px;">
+      <button class="btn primary full" id="btnRestart">重新開始</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ========== 資料表(對應原 .py 的怪物/技能設定) ==========
+  var MONSTER_POOL = {
+    "史萊姆":   { hp: 10, atk: [1, 3], exp: 5,  gold: 3,  emoji: "🟢" },
+    "哥布林":   { hp: 15, atk: [2, 5], exp: 8,  gold: 6,  emoji: "👺" },
+    "灰狼":     { hp: 20, atk: [3, 6], exp: 12, gold: 9,  emoji: "🐺" },
+    "骷髏戰士": { hp: 25, atk: [4, 7], exp: 16, gold: 12, emoji: "💀" },
+    "石巨人":   { hp: 35, atk: [5, 9], exp: 22, gold: 18, emoji: "🗿" },
+    "黑龍":     { hp: 50, atk: [7, 14], exp: 40, gold: 35, emoji: "🐉" }
+  };
+
+  var BOSS_INTERVAL = 5;
+  var BOSS_POOL = {
+    "哥布林王": { hp: 60,  atk: [6, 10],  exp: 50,  gold: 40,  emoji: "👑", special: "enrage" },
+    "死靈法師": { hp: 75,  atk: [5, 9],   exp: 65,  gold: 55,  emoji: "🧙‍♂️", special: "curse" },
+    "遠古巨龍": { hp: 120, atk: [10, 18], exp: 150, gold: 100, emoji: "🐲", special: "double_attack" }
+  };
+
+  var CRIT_CHANCE = 0.2;
+  var CRIT_MULTIPLIER = 2;
+
+  var SKILL_DEFS = {
+    "重擊":    { cooldown: 3, desc: "造成2倍攻擊範圍的傷害" },
+    "防禦":    { cooldown: 2, desc: "本回合受到的傷害減半,且會恢復少量HP" },
+    "治癒之光": { cooldown: 4, desc: "不消耗藥水,直接回復15~25點HP" }
+  };
+  var SKILL_ORDER = ["重擊", "防禦", "治癒之光"];
+
+  var SAVE_KEY = "yongzhe_songtou_record_v1";
+
+  // ========== 小工具 ==========
+  function randint(lo, hi) { return Math.floor(Math.random() * (hi - lo + 1)) + lo; }
+
+  function rollDamage(atkRange, multiplier) {
+    multiplier = multiplier || 1;
+    var dmg = randint(atkRange[0], atkRange[1]) * multiplier;
+    var crit = Math.random() < CRIT_CHANCE;
+    if (crit) dmg *= CRIT_MULTIPLIER;
+    return { dmg: dmg, crit: crit };
+  }
+
+  function weightedChoice(items, weights) {
+    var total = weights.reduce(function (a, b) { return a + b; }, 0);
+    var r = Math.random() * total;
+    var acc = 0;
+    for (var i = 0; i < items.length; i++) {
+      acc += weights[i];
+      if (r < acc) return items[i];
+    }
+    return items[items.length - 1];
+  }
+
+  // ========== 存檔/紀錄(localStorage 取代 JSON 檔) ==========
+  function defaultRecord() {
+    return { total_runs: 0, total_deaths: 0, highest_level: 0, richest_gold: 0, most_kills: 0, leaderboard: [] };
+  }
+
+  function loadRecord() {
+    var rec = defaultRecord();
+    try {
+      var raw = localStorage.getItem(SAVE_KEY);
+      if (raw) {
+        var data = JSON.parse(raw);
+        Object.assign(rec, data);
+      }
+    } catch (e) { /* 讀取失敗就用預設值 */ }
+    return rec;
+  }
+
+  function saveRecord(rec) {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(rec)); } catch (e) { /* 儲存失敗就算了 */ }
+  }
+
+  function updateRecord(rec, hero, result) {
+    rec.total_runs += 1;
+    if (result === "死亡") rec.total_deaths += 1;
+    rec.highest_level = Math.max(rec.highest_level, hero.level);
+    rec.richest_gold = Math.max(rec.richest_gold, hero.gold);
+    rec.most_kills = Math.max(rec.most_kills, hero.kills);
+    rec.leaderboard.push({ level: hero.level, gold: hero.gold, kills: hero.kills, result: result });
+    rec.leaderboard.sort(function (a, b) { return (b.level - a.level) || (b.gold - a.gold); });
+    rec.leaderboard = rec.leaderboard.slice(0, 5);
+    saveRecord(rec);
+  }
+
+  function leaderboardTable(entries) {
+    if (!entries.length) return "";
+    var rows = entries.map(function (e, i) {
+      return "<tr><td>" + (i + 1) + "</td><td>Lv." + e.level + "</td><td>" + e.kills + " 隻</td><td>" + e.gold + "</td><td>" + e.result + "</td></tr>";
+    }).join("");
+    return '<table class="board"><thead><tr><th>#</th><th>等級</th><th>擊殺</th><th>金幣</th><th>結局</th></tr></thead><tbody>' + rows + "</tbody></table>";
+  }
+
+  // ========== 勇者 ==========
+  function makeHero() {
+    var skills = {};
+    SKILL_ORDER.forEach(function (n) { skills[n] = 0; });
+    return {
+      level: 1, hp: 30, maxHp: 30, atk: [3, 6], def: 0,
+      exp: 0, expToNext: 20, gold: 15, potions: 2, kills: 0,
+      skills: skills, defending: false
+    };
+  }
+
+  function levelUp(hero) {
+    hero.level += 1;
+    hero.maxHp += 10;
+    hero.hp = hero.maxHp;
+    hero.atk = [hero.atk[0] + 1, hero.atk[1] + 2];
+    hero.expToNext = Math.floor(hero.expToNext * 1.5);
+    addLog("✨ 勇者升級了!現在是 Lv." + hero.level + ",HP全滿,攻擊力提升為 " + hero.atk[0] + "~" + hero.atk[1] + "!", "levelup");
+  }
+
+  function gainReward(hero, monster) {
+    addLog("🏆 擊敗了 " + monster.name + "!獲得 " + monster.exp + " 經驗值與 " + monster.gold + " 金幣", "victory");
+    hero.exp += monster.exp;
+    hero.gold += monster.gold;
+    hero.kills += 1;
+    while (hero.exp >= hero.expToNext) {
+      hero.exp -= hero.expToNext;
+      levelUp(hero);
+    }
+  }
+
+  function tickCooldowns(hero) {
+    SKILL_ORDER.forEach(function (n) { if (hero.skills[n] > 0) hero.skills[n] -= 1; });
+  }
+
+  // ========== 怪物產生 ==========
+  function pickMonster(heroLevel, kills) {
+    if ((kills + 1) % BOSS_INTERVAL === 0) {
+      var bossNames = Object.keys(BOSS_POOL);
+      var bName = bossNames[randint(0, bossNames.length - 1)];
+      var b = BOSS_POOL[bName];
+      return { name: bName, emoji: b.emoji, hp: b.hp, maxHp: b.hp, atk: b.atk.slice(), exp: b.exp, gold: b.gold, special: b.special, isBoss: true };
+    }
+    var names = Object.keys(MONSTER_POOL);
+    var weights = names.map(function (_, i) {
+      return Math.max(1, 6 - Math.abs(i - Math.min(heroLevel - 1, names.length - 1)));
+    });
+    var name = weightedChoice(names, weights);
+    var m = MONSTER_POOL[name];
+    return { name: name, emoji: m.emoji, hp: m.hp, maxHp: m.hp, atk: m.atk.slice(), exp: m.exp, gold: m.gold, special: null, isBoss: false };
+  }
+
+  function monsterTurn(hero, monster) {
+    var special = monster.special;
+    var attacks = 1;
+
+    if (special === "enrage" && monster.hp <= Math.floor(monster.maxHp / 2)) {
+      monster.atk = [monster.atk[0] + 2, monster.atk[1] + 3];
+      addLog("🔥 " + monster.name + " 進入狂暴狀態,攻擊力大幅提升!", "boss");
+      monster.special = null;
+    }
+
+    if (special === "double_attack" && Math.random() < 0.3) {
+      attacks = 2;
+      addLog("⚡ " + monster.name + " 發動連續攻擊!", "boss");
+    }
+
+    for (var i = 0; i < attacks; i++) {
+      var roll = rollDamage(monster.atk);
+      var dmg = roll.dmg;
+      if (special === "curse" && Math.random() < 0.3) {
+        addLog("☠️ " + monster.name + " 對勇者施展詛咒,無視防禦造成傷害!", "boss");
+      } else {
+        dmg = Math.max(0, dmg - hero.def);
+      }
+      if (hero.defending) dmg = Math.floor(dmg / 2);
+
+      hero.hp -= dmg;
+      if (roll.crit) addLog("💢 " + monster.name + " 發動了會心一擊,造成了 " + dmg + " 點傷害!", "crit-enemy");
+      else addLog("👊 " + monster.name + " 發動了攻擊,造成了 " + dmg + " 點傷害", "dmg-taken");
+
+      if (hero.hp <= 0) return false;
+    }
+    return true;
+  }
+
+  // ========== 畫面狀態 ==========
+  var hero, monster, record;
+  var els = {};
+  ["view-intro","view-battle","view-result","view-shop","view-gameover"].forEach(function (id) { els[id] = document.getElementById(id); });
+
+  function showView(name) {
+    ["view-intro","view-battle","view-result","view-shop","view-gameover"].forEach(function (id) {
+      els[id].classList.toggle("hidden", id !== "view-" + name);
+    });
+  }
+
+  function addLog(text, cls) {
+    var log = document.getElementById("log");
+    var p = document.createElement("p");
+    p.className = cls || "info";
+    p.textContent = text;
+    log.appendChild(p);
+    while (log.children.length > 200) log.removeChild(log.firstChild);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function hpColor(hp, maxHp) {
+    var pct = hp / maxHp;
+    if (pct > 0.5) return "var(--hp-good)";
+    if (pct > 0.25) return "var(--hp-mid)";
+    return "var(--hp-bad)";
+  }
+
+  function renderBattle() {
+    var heroHp = Math.max(0, hero.hp);
+    document.getElementById("heroHpFill").style.width = Math.max(0, (heroHp / hero.maxHp) * 100) + "%";
+    document.getElementById("heroHpFill").style.background = hpColor(heroHp, hero.maxHp);
+    document.getElementById("heroHpLabel").textContent = "HP " + heroHp + " / " + hero.maxHp;
+    document.getElementById("heroSub").textContent = "Lv." + hero.level + "　EXP " + hero.exp + "/" + hero.expToNext;
+    document.getElementById("heroStatLine").textContent =
+      "🛡️" + hero.def + "　💰" + hero.gold + "　🧪" + hero.potions + "　⚔️" + hero.atk[0] + "~" + hero.atk[1];
+
+    var mHp = Math.max(0, monster.hp);
+    document.getElementById("monsterEmoji").textContent = monster.emoji + " ";
+    document.getElementById("monsterName").textContent = monster.name;
+    document.getElementById("monsterBadge").style.display = monster.isBoss ? "inline" : "none";
+    document.getElementById("monsterHpFill").style.width = Math.max(0, (mHp / monster.maxHp) * 100) + "%";
+    document.getElementById("monsterHpFill").style.background = hpColor(mHp, monster.maxHp);
+    document.getElementById("monsterHpLabel").textContent = "HP " + mHp + " / " + monster.maxHp;
+    document.getElementById("monsterSub").textContent = "⚔️" + monster.atk[0] + "~" + monster.atk[1];
+
+    renderSkillList();
+  }
+
+  function renderSkillList() {
+    var wrap = document.getElementById("skillList");
+    wrap.innerHTML = "";
+    SKILL_ORDER.forEach(function (name) {
+      var cd = hero.skills[name];
+      var btn = document.createElement("button");
+      btn.className = "btn skill-btn";
+      btn.innerHTML =
+        "<span>" + name + "<br><span class='desc'>" + SKILL_DEFS[name].desc + "</span></span>" +
+        "<span class='cd " + (cd === 0 ? "ready" : "") + "'>" + (cd === 0 ? "就緒" : "冷卻中(" + cd + ")") + "</span>";
+      btn.addEventListener("click", function () { useSkill(name); });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function setActionsEnabled(enabled) {
+    ["btnAttack","btnPotion","btnSkillMenu","btnFlee"].forEach(function (id) {
+      document.getElementById(id).disabled = !enabled;
+    });
+  }
+
+  function beginTurn() {
+    hero.defending = false;
+    setActionsEnabled(false);
+  }
+
+  function resolveAfterAction(turnTaken) {
+    if (!turnTaken) { renderBattle(); setActionsEnabled(true); return; }
+    tickCooldowns(hero);
+    renderBattle();
+
+    if (monster.hp <= 0) {
+      addLog(monster.emoji + " " + monster.name + " 被擊倒了!", "victory");
+      gainReward(hero, monster);
+      renderBattle();
+      endBattle("win");
+      return;
+    }
+
+    var alive = monsterTurn(hero, monster);
+    renderBattle();
+    if (!alive) {
+      addLog("☠️ 勇者HP歸零,倒下了...", "death");
+      endBattle("dead");
+      return;
+    }
+    setActionsEnabled(true);
+  }
+
+  // ---- 戰鬥動作 ----
+  document.getElementById("btnAttack").addEventListener("click", function () {
+    beginTurn();
+    var roll = rollDamage(hero.atk);
+    monster.hp -= roll.dmg;
+    addLog(roll.crit ? "💥 爆擊!勇者發動了猛烈攻擊,造成了 " + roll.dmg + " 點傷害!" : "🗡️ 勇者發動了攻擊,造成了 " + roll.dmg + " 點傷害", roll.crit ? "crit-player" : "info");
+    resolveAfterAction(true);
+  });
+
+  document.getElementById("btnPotion").addEventListener("click", function () {
+    beginTurn();
+    if (hero.potions > 0) {
+      hero.potions -= 1;
+      var heal = randint(8, 15);
+      hero.hp = Math.min(hero.maxHp, hero.hp + heal);
+      addLog("🧪 勇者喝下藥水,回復了 " + heal + " 點HP!", "heal");
+      resolveAfterAction(true);
+    } else {
+      addLog("❌ 藥水不夠了!", "error");
+      resolveAfterAction(false);
+    }
+  });
+
+  document.getElementById("btnFlee").addEventListener("click", function () {
+    beginTurn();
+    if (Math.random() < 0.5) {
+      addLog("💨 勇者成功逃跑了!", "info");
+      endBattle("flee");
+    } else {
+      addLog("😱 逃跑失敗,怪物抓住了破綻!", "error");
+      resolveAfterAction(true);
+    }
+  });
+
+  document.getElementById("btnSkillMenu").addEventListener("click", function () {
+    beginTurn();
+    document.getElementById("mainActions").classList.add("hidden");
+    document.getElementById("skillActions").classList.remove("hidden");
+    renderSkillList();
+  });
+
+  document.getElementById("btnSkillCancel").addEventListener("click", function () {
+    document.getElementById("skillActions").classList.add("hidden");
+    document.getElementById("mainActions").classList.remove("hidden");
+    setActionsEnabled(true);
+  });
+
+  function useSkill(name) {
+    document.getElementById("skillActions").classList.add("hidden");
+    document.getElementById("mainActions").classList.remove("hidden");
+
+    var turnTaken = true;
+    if (hero.skills[name] > 0) {
+      addLog("❌ 該技能還在冷卻中!", "error");
+      turnTaken = false;
+    } else if (name === "重擊") {
+      var roll = rollDamage(hero.atk, 2);
+      monster.hp -= roll.dmg;
+      addLog("🔥 勇者發動了重擊!造成了 " + roll.dmg + " 點傷害!" + (roll.crit ? "(爆擊!)" : ""), "crit-player");
+      hero.skills[name] = SKILL_DEFS[name].cooldown;
+    } else if (name === "防禦") {
+      hero.defending = true;
+      var heal1 = randint(3, 8);
+      hero.hp = Math.min(hero.maxHp, hero.hp + heal1);
+      addLog("🛡️ 勇者擺出防禦姿態,回復了 " + heal1 + " 點HP,本回合傷害減半!", "heal");
+      hero.skills[name] = SKILL_DEFS[name].cooldown;
+    } else if (name === "治癒之光") {
+      var heal2 = randint(15, 25);
+      hero.hp = Math.min(hero.maxHp, hero.hp + heal2);
+      addLog("✨ 勇者發動治癒之光,回復了 " + heal2 + " 點HP!", "heal");
+      hero.skills[name] = SKILL_DEFS[name].cooldown;
+    }
+    resolveAfterAction(turnTaken);
+  }
+
+  // ---- 戰鬥開始/結束 ----
+  function startBattle() {
+    monster = pickMonster(hero.level, hero.kills);
+    hero.defending = false;
+    document.getElementById("skillActions").classList.add("hidden");
+    document.getElementById("mainActions").classList.remove("hidden");
+
+    if (monster.isBoss) addLog("🚨 警告!強大的氣息接近!👑 " + monster.name + " 出現了,HP為 " + monster.hp + "!", "boss-alert");
+    else addLog("⚔️ 遇到怪物了!是一隻 " + monster.emoji + " " + monster.name + ",HP為 " + monster.hp, "encounter");
+
+    showView("battle");
+    renderBattle();
+    setActionsEnabled(true);
+  }
+
+  function endBattle(result) {
+    setActionsEnabled(false);
+    if (result === "dead") {
+      updateRecord(record, hero, "死亡");
+      showGameOver(
+        "💀 勇者戰敗,最終停留在 Lv." + hero.level + ",擊殺" + hero.kills + "隻怪物,存了 " + hero.gold + " 金幣,遊戲結束!",
+        "這是你第 " + record.total_deaths + " 次送頭。"
+      );
+      return;
+    }
+    if (result === "flee") {
+      addLog("勇者驚魂未定,HP " + hero.hp + "/" + hero.maxHp, "info");
+    }
+    document.getElementById("resultSummary").innerHTML =
+      "🧙 目前 Lv." + hero.level + "　HP " + hero.hp + "/" + hero.maxHp + "　💰" + hero.gold + "　🧪" + hero.potions;
+    showView("result");
+  }
+
+  // ---- 戰後選單 ----
+  document.getElementById("btnNextMonster").addEventListener("click", startBattle);
+  document.getElementById("btnGoShop").addEventListener("click", function () {
+    showView("shop");
+    renderShop();
+  });
+  document.getElementById("btnLeaveVillage").addEventListener("click", function () {
+    updateRecord(record, hero, "生還");
+    showGameOver("🏡 勇者決定回村莊休息。最終等級 Lv." + hero.level + ",金幣 " + hero.gold + ",遊戲結束!");
+  });
+
+  // ---- 商店 ----
+  function shopCosts() {
+    return {
+      atk: 15 + hero.atk[0] * 5,
+      def: 15 + hero.def * 8,
+      hp: 20 + Math.floor((hero.maxHp - 30) / 2)
+    };
+  }
+
+  function renderShop() {
+    var c = shopCosts();
+    document.getElementById("shopGold").textContent = hero.gold;
+    document.getElementById("priceItem1").textContent = "(5 金幣)";
+    document.getElementById("curItem1").textContent = "目前持有:" + hero.potions;
+    document.getElementById("priceItem2").textContent = "(" + c.atk + " 金幣)";
+    document.getElementById("curItem2").textContent = "目前攻擊:" + hero.atk[0] + "~" + hero.atk[1];
+    document.getElementById("priceItem3").textContent = "(" + c.def + " 金幣)";
+    document.getElementById("curItem3").textContent = "目前防禦:" + hero.def;
+    document.getElementById("priceItem4").textContent = "(" + c.hp + " 金幣)";
+    document.getElementById("curItem4").textContent = "目前上限:" + hero.maxHp;
+    document.getElementById("shopMain").classList.remove("hidden");
+    document.getElementById("shopConfirm").classList.add("hidden");
+  }
+
+  function shopMsg(text) { document.getElementById("shopMsg").textContent = text; }
+
+  document.getElementById("btnBuy1").addEventListener("click", function () {
+    if (hero.gold >= 5) { hero.gold -= 5; hero.potions += 1; shopMsg("🧪 購買了一瓶藥水!"); }
+    else shopMsg("❌ 金幣不夠!");
+    renderShop();
+  });
+  document.getElementById("btnBuy2").addEventListener("click", function () {
+    var c = shopCosts();
+    if (hero.gold >= c.atk) { hero.gold -= c.atk; hero.atk = [hero.atk[0] + 1, hero.atk[1] + 2]; shopMsg("⚔️ 攻擊力提升為 " + hero.atk[0] + "~" + hero.atk[1] + "!"); }
+    else shopMsg("❌ 金幣不夠!");
+    renderShop();
+  });
+  document.getElementById("btnBuy3").addEventListener("click", function () {
+    var c = shopCosts();
+    if (hero.gold >= c.def) { hero.gold -= c.def; hero.def += 1; shopMsg("🛡️ 防禦力提升為 " + hero.def + "!"); }
+    else shopMsg("❌ 金幣不夠!");
+    renderShop();
+  });
+  document.getElementById("btnBuy4").addEventListener("click", function () {
+    var c = shopCosts();
+    if (hero.gold >= c.hp) { hero.gold -= c.hp; hero.maxHp += 10; hero.hp = hero.maxHp; shopMsg("❤️ 生命上限提升為 " + hero.maxHp + ",HP已回滿!"); }
+    else shopMsg("❌ 金幣不夠!");
+    renderShop();
+  });
+  document.getElementById("btnLeaveShop").addEventListener("click", function () {
+    document.getElementById("shopMain").classList.add("hidden");
+    document.getElementById("shopConfirm").classList.remove("hidden");
+  });
+  document.getElementById("btnShopContinue").addEventListener("click", startBattle);
+  document.getElementById("btnShopLeave").addEventListener("click", function () {
+    updateRecord(record, hero, "生還");
+    showGameOver("🏡 勇者決定回村莊休息。最終等級 Lv." + hero.level + ",金幣 " + hero.gold + ",遊戲結束!");
+  });
+
+  // ---- 首頁 / 遊戲結束 ----
+  function renderRecordSummary(targetId) {
+    var box = document.getElementById(targetId);
+    if (record.total_runs === 0) {
+      box.innerHTML = "這是你第一次送頭,祝你好運(死)!";
+      return;
+    }
+    var html = "📜 歷史紀錄:共送頭 <strong>" + record.total_deaths + "</strong> 次 / 冒險 " + record.total_runs + " 次<br>" +
+      "歷史最高等級 Lv." + record.highest_level + "　最多金幣 " + record.richest_gold + "　最多擊殺 " + record.most_kills;
+    if (record.leaderboard.length) {
+      html += "<br>🏆 送頭排行榜" + leaderboardTable(record.leaderboard.slice(0, 3));
+    }
+    box.innerHTML = html;
+  }
+
+  function showGameOver(line1, line2) {
+    document.getElementById("gameoverSummary").innerHTML = line1 + (line2 ? "<br>" + line2 : "");
+    document.getElementById("gameoverBoard").innerHTML = record.leaderboard.length
+      ? "<p class='label' style='font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 0 0;'>送頭排行榜</p>" + leaderboardTable(record.leaderboard)
+      : "";
+    showView("gameover");
+  }
+
+  document.getElementById("btnStart").addEventListener("click", function () {
+    hero = makeHero();
+    document.getElementById("log").innerHTML = "";
+    startBattle();
+  });
+
+  document.getElementById("btnRestart").addEventListener("click", function () {
+    hero = makeHero();
+    document.getElementById("log").innerHTML = "";
+    startBattle();
+  });
+
+  // ========== 初始化 ==========
+  record = loadRecord();
+  renderRecordSummary("recordSummary");
+  showView("intro");
+})();
+</script>
+</body>
+</html>
