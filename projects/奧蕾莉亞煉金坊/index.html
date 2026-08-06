@@ -619,7 +619,7 @@
     document.getElementById('multLine').textContent = '目前產出倍率 ×' + multiplier().toFixed(2);
 
     const btn = document.getElementById('prestigeBtn');
-    const minToPrestige = 1000;
+    const minToPrestige = 100000; // matches the first crystal threshold in crystals()
     btn.disabled = state.lifetimeEarned < minToPrestige;
     btn.textContent = state.lifetimeEarned < minToPrestige
       ? `再累積 ${fmt(minToPrestige - state.lifetimeEarned)} 靈蘊即可重生`
