@@ -40,10 +40,25 @@
     .toc-list li a:active{background:var(--bg);}
     .volume-nav{display:flex;justify-content:space-between;gap:16px;margin-top:30px;padding-top:20px;border-top:1px solid var(--border);font-size:14px;}
     .volume-nav a{color:var(--accent);text-decoration:none;}
+  
+    .pw-gate{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px;}
+    .pw-gate.unlocked{display:none;}
+    .pw-box{max-width:280px;width:100%;text-align:center;}
+    .pw-box .pw-title{font-size:18px;font-weight:700;margin-bottom:18px;}
+    .pw-box input{width:100%;padding:12px;font-size:16px;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text);box-sizing:border-box;margin-bottom:10px;}
+    .pw-box button{width:100%;padding:12px;font-size:15px;border:none;border-radius:8px;background:var(--accent);color:#fff;cursor:pointer;}
+    .pw-box .pw-error{color:var(--speaker-female);font-size:13px;margin-top:10px;min-height:16px;}
   </style>
 </head>
 <body>
-
+<div class="pw-gate" id="pw-gate" data-hash="03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4">
+  <div class="pw-box">
+    <div class="pw-title">🔒 需要密碼</div>
+    <input type="password" id="pw-input" placeholder="輸入密碼" autocomplete="off">
+    <button id="pw-submit">確認</button>
+    <div class="pw-error" id="pw-error"></div>
+  </div>
+</div>
 <main>
   <div class="book-title">文字小說</div>
   <section class="chapter" id="chapter-0"><h2 class="chapter-title">第一章：森林中的邂逅</h2><div class="act-title">第一幕：公會的喧囂與金髮少女的擔憂</div>
@@ -709,6 +724,39 @@
       lightbox.addEventListener('click',function(e){ if(e.target===lightbox) closeLightbox(); });
     })();
   </script>
+<script>
+    (function(){
+      const gate=document.getElementById('pw-gate');
+      if(!gate) return;
+      const targetHash=gate.dataset.hash;
+      const storageKey='pw-ok-'+targetHash;
+      const input=document.getElementById('pw-input');
+      const submitBtn=document.getElementById('pw-submit');
+      const errorEl=document.getElementById('pw-error');
 
+      function unlock(){
+        gate.classList.add('unlocked');
+        document.body.style.overflow='';
+        try{ sessionStorage.setItem(storageKey,'1'); }catch(e){}
+      }
+      try{
+        if(sessionStorage.getItem(storageKey)==='1'){ unlock(); return; }
+      }catch(e){}
+      document.body.style.overflow='hidden';
+
+      async function trySha256Hex(text){
+        const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+        return [...new Uint8Array(buf)].map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+      }
+      async function tryUnlock(){
+        const hash=await trySha256Hex(input.value);
+        if(hash===targetHash){ unlock(); }
+        else { errorEl.textContent='密碼錯誤'; input.value=''; input.focus(); }
+      }
+      submitBtn.addEventListener('click',tryUnlock);
+      input.addEventListener('keydown',function(e){ if(e.key==='Enter') tryUnlock(); });
+      input.focus();
+    })();
+  </script>
 </body>
 </html>
